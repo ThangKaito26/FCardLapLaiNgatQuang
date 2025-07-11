@@ -67,7 +67,7 @@
 </head>
 <body class="antialiased">
 
-    <!-- Login Screen (from laplaingatquangGoogle) -->
+    <!-- Login Screen -->
     <div id="loginContainer" class="flex items-center justify-center h-screen">
         <div class="text-center p-8 bg-gray-800 rounded-xl shadow-2xl max-w-sm mx-auto">
             <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2">Học Tập Thông Minh Pro</h1>
@@ -240,7 +240,17 @@
             <!-- AI Import Modal -->
             <div id="ai-import-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden"><div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl"><h3 class="text-2xl font-bold mb-2 text-white">Nhập thẻ bằng AI</h3><p class="text-gray-400 mb-4">Dán văn bản hoặc tải ảnh lên. AI sẽ tự động tạo thẻ cho bạn.</p><div class="mb-4"><label for="ai-deck-select" class="block text-sm font-medium text-gray-300 mb-2">Chọn môn học để thêm thẻ:</label><select id="ai-deck-select" class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5"></select></div><textarea id="ai-text-input" placeholder="Dán văn bản vào đây..." class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 mb-4 text-white" rows="8"></textarea><div class="mb-4"><label class="block text-sm font-medium text-gray-400 mb-2">Hoặc tải ảnh lên:</label><input id="ai-image-input" type="file" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/></div><div class="flex justify-end space-x-4"><button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button><button id="confirm-ai-import" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"><i class="fas fa-cogs mr-2"></i>Xử lý</button></div></div></div>
             <!-- AI Review Modal -->
-            <div id="ai-review-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden"><div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-3xl"><h3 class="text-2xl font-bold mb-4 text-white">Xem lại các thẻ do AI tạo</h3><div id="ai-review-list" class="max-h-[60vh] overflow-y-auto bg-gray-900/50 p-4 rounded-lg mb-4"></div><div class="flex justify-end space-x-4"><button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button><button id="ai-translate-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg hidden"><i class="fas fa-language mr-2"></i>Dịch & Thêm phiên âm</button><button id="confirm-ai-add" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Thêm các thẻ đã chọn</button></div></div></div>
+            <div id="ai-review-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden">
+                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-3xl">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Xem lại các thẻ do AI tạo</h3>
+                    <div id="ai-review-list" class="max-h-[60vh] overflow-y-auto bg-gray-900/50 p-4 rounded-lg mb-4"></div>
+                    <div class="flex justify-end space-x-4">
+                        <button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button>
+                        <!-- Nút dịch đã bị xóa vì logic mới không cần đến nó -->
+                        <button id="confirm-ai-add" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Thêm các thẻ đã chọn</button>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Notification Toast -->
@@ -329,7 +339,6 @@
         const aiReviewModal = $('#ai-review-modal');
         const viewDeckModal = $('#view-deck-modal');
         const imageAiConfirmModal = $('#image-ai-confirm-modal');
-        const aiTranslateBtn = $('#ai-translate-btn');
         const deleteConfirmModal = $('#delete-confirm-modal');
         const deleteConfirmText = $('#delete-confirm-text');
         const confirmDeleteBtn = $('#confirm-delete-btn');
@@ -939,21 +948,17 @@
         function renderAiReviewList() {
             const reviewList = $('#ai-review-list');
             reviewList.innerHTML = '';
-            let needsTranslation = false;
             aiGeneratedCards.forEach((card, index) => {
-                if (card.back && !card.back.includes('/')) {
-                    needsTranslation = true;
-                }
                 reviewList.innerHTML += `
                     <div class="bg-gray-700 p-3 rounded-lg mb-2"><div class="flex items-start">
                         <input type="checkbox" checked id="card-check-${index}" class="mt-1.5 mr-3 h-4 w-4 rounded border-gray-500 text-indigo-600 focus:ring-indigo-500">
                         <div class="flex-grow">
                             <p class="font-semibold text-white">${card.front}</p>
-                            <p class="text-gray-300">${card.back}</p>
+                            <p class="text-gray-300">${card.back || 'AI không tìm thấy bản dịch...'}</p>
                         </div>
                     </div></div>`;
             });
-            aiTranslateBtn.classList.toggle('hidden', !needsTranslation);
+            // The translation button is no longer needed with the new logic
         }
 
         // --- App Entry Point & Event Listeners ---
@@ -985,7 +990,6 @@
             loginBtn.addEventListener('click', signInWithGoogle);
             logoutBtn.addEventListener('click', signOutUser);
             
-            // NEW: Event listener for the new button
             $('#subject-repetition-btn').addEventListener('click', () => {
                 window.location.href = 'laplaingatquangGoogle.html';
             });
@@ -1060,16 +1064,23 @@
                 let parts = [];
 
                 if (text) {
-                    prompt = `You are a flashcard creation assistant. The user has provided a block of text where each vocabulary entry is separated by one or more blank lines. For each entry, the first line is the term (the 'front' of the card), and the following line(s) contain the definition, pronunciation, and meaning (the 'back' of the card). Your task is to parse this text and convert it into a structured JSON format. Example Input Text:\ncelebrate\n/ˌsel.əˈbreɪ/ ăn mừng, kỷ niệm\n\nanniversary\n/ˌæn.ɪˈvɜː.sər.i/ ngày kỷ niệm\nYour output must be a JSON object with a single key 'flashcards', which is an array of objects. Each object must have 'front' and 'back' keys. Now, process the following text and generate the JSON output accordingly:\n\n${text}`;
+                    // **FIXED PROMPT** - More direct and robust
+                    prompt = `You are an English vocabulary flashcard assistant. From the text provided, identify the key English words or short phrases. For each term, find its IPA phonetic transcription and its Vietnamese translation. Your output must be a JSON object with a single key 'flashcards', which is an array of objects. Each object must have 'front' (the English term) and 'back' (a string formatted as '/phonetic/ Vietnamese translation'). Process the following text:\n\n${text}`;
                     parts.push({ text: prompt });
                 } else if (imageFile) {
-                    prompt = "From the image provided, extract key concepts and create flashcards. The front should be a question or term, and the back should be the answer or definition, including pronunciation if applicable (e.g., /pro.nun.ci.a.tion/ meaning). Provide the output as a JSON object with a single key 'flashcards' which is an array of objects, each with 'front' and 'back' keys.";
-                    const base64 = await imageToBase64(imageFile);
-                    parts.push({ text: prompt });
-                    parts.push({ inlineData: { mimeType: imageFile.type, data: base64 } });
+                    // **FIXED PROMPT** - More direct and robust
+                    prompt = "You are an English vocabulary flashcard assistant. From the image provided, identify the key English words or short phrases. For each term, find its IPA phonetic transcription and its Vietnamese translation. Your output must be a JSON object with a single key 'flashcards', which is an array of objects. Each object must have 'front' (the English term) and 'back' (a string formatted as '/phonetic/ Vietnamese translation').";
+                    try {
+                        const base64 = await imageToBase64(imageFile);
+                        parts.push({ text: prompt });
+                        parts.push({ inlineData: { mimeType: imageFile.type, data: base64 } });
+                    } catch (error) {
+                        showToast(error.message);
+                        return;
+                    }
                 }
 
-                showLoading("AI đang phân tích...");
+                showLoading("AI đang phân tích và dịch...");
                 try {
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
                     const payload = {
@@ -1077,49 +1088,25 @@
                         generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { flashcards: { type: "ARRAY", items: { type: "OBJECT", properties: { front: { type: "STRING" }, back: { type: "STRING" } }, required: ["front", "back"] } } } } }
                     };
                     const result = await callApi(url, payload);
+                    // **FIXED LOGIC** - Directly use the result
                     const cards = JSON.parse(result.candidates[0].content.parts[0].text).flashcards;
                     if (cards && cards.length > 0) {
                         aiGeneratedCards = cards;
-                        renderAiReviewList();
+                        renderAiReviewList(); // This function is now simpler
                         closeModal(aiImportModal);
                         openModal(aiReviewModal);
                     } else {
                         showToast("AI không tìm thấy thẻ nào để tạo.");
                     }
                 } catch (error) {
+                    console.error("AI processing error:", error);
                     showToast("AI không thể xử lý yêu cầu. Vui lòng thử lại.");
                 } finally {
                     hideLoading();
                 }
             });
             
-            aiTranslateBtn.addEventListener('click', async () => {
-                const wordsToTranslate = [];
-                 aiGeneratedCards.forEach((card, index) => {
-                    if ($(`#card-check-${index}`).checked && card.back && !card.back.includes('/')) {
-                        wordsToTranslate.push(card.front);
-                    }
-                });
-                if (wordsToTranslate.length === 0) { showToast("Không có từ nào cần dịch."); return; }
-                
-                showLoading("AI đang dịch...");
-                try {
-                    const prompt = `For the following list of English words, provide their Vietnamese meaning and IPA phonetic transcription. Words: ${wordsToTranslate.join(', ')}. Respond with a JSON object with a single key 'translations', which is an array of objects. Each object must have two keys: 'original' (the English word) and 'translation' (a string formatted as '/phonetic/ vietnamese meaning').`;
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
-                    const payload = {
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { translations: { type: "ARRAY", items: { type: "OBJECT", properties: { original: { type: "STRING" }, translation: { type: "STRING" } }, required: ["original", "translation"] } } } } }
-                    };
-                    const result = await callApi(url, payload);
-                    const translations = JSON.parse(result.candidates[0].content.parts[0].text).translations;
-                    const translationMap = new Map(translations.map(t => [t.original.toLowerCase(), t.translation]));
-                    aiGeneratedCards.forEach(card => {
-                        const translated = translationMap.get(card.front.toLowerCase());
-                        if (translated) card.back = translated;
-                    });
-                    renderAiReviewList();
-                } catch (error) { showToast("Lỗi khi dịch. Vui lòng thử lại."); } finally { hideLoading(); }
-            });
+            // **REMOVED** The 'aiTranslateBtn' event listener is no longer necessary.
 
             $('#confirm-ai-add').addEventListener('click', () => { closeModal(aiReviewModal); openModal(imageAiConfirmModal); });
             $('#confirm-ai-add-no-image').addEventListener('click', () => { closeModal(imageAiConfirmModal); addAiCardsToFirestore(false); });
