@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Tập Thông Minh Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark theme from Anki */
+            color: #e5e7eb;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .card {
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            transform: rotateY(0deg);
+        }
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .btn-rating:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        #notification-toast {
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        #notification-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .modal-content {
+            animation: slide-up 0.3s ease-out;
+        }
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .file-item:hover {
+            background-color: #374151;
+        }
+        #flashcard.swiping {
+             transition: none;
+        }
+        .filter-btn.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Login Screen (from laplaingatquangGoogle) -->
+    <div id="loginContainer" class="flex items-center justify-center h-screen">
+        <div class="text-center p-8 bg-gray-800 rounded-xl shadow-2xl max-w-sm mx-auto">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2">Học Tập Thông Minh Pro</h1>
+            <p class="text-gray-400 mb-8">Đăng nhập để bắt đầu hành trình học tập của bạn.</p>
+            <button id="loginBtn" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg shadow-sm hover:bg-gray-200 transition-all transform hover:scale-105">
+                <svg class="w-6 h-6" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
+                Đăng nhập với Google
+            </button>
+        </div>
+    </div>
+    
+    <!-- Main App Container -->
+    <div id="app" class="min-h-screen flex-col items-center p-4 hidden">
+        
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex-col items-center justify-center z-50 hidden">
+            <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div>
+            <p id="loading-text" class="mt-4 text-white text-lg">Đang tải dữ liệu...</p>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="w-full max-w-5xl mx-auto">
+            <!-- Header with User Info -->
+            <header class="flex justify-between items-center mb-6 md:mb-8">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-white">Bảng điều khiển</h1>
+                    <p class="text-gray-400 mt-2">Quản lý thư mục và môn học của bạn.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                     <div id="userInfo" class="text-right hidden sm:block">
+                        <p id="userName" class="font-semibold text-gray-200"></p>
+                        <p id="userEmail" class="text-xs text-gray-500"></p>
+                     </div>
+                     <img id="userAvatar" class="w-12 h-12 rounded-full shadow-md" src="" alt="User Avatar">
+                     <button id="logoutBtn" title="Đăng xuất" class="p-3 rounded-full bg-gray-700 hover:bg-red-500/20 transition text-gray-300 hover:text-red-400">
+                        <i data-lucide="log-out" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- File Manager View -->
+            <div id="file-manager-view">
+                <div class="bg-gray-800 p-4 sm:p-6 rounded-xl shadow-lg">
+                    <!-- Toolbar -->
+                    <div class="flex flex-wrap gap-2 justify-between items-center mb-4">
+                        <div id="breadcrumb" class="text-gray-400 flex items-center flex-wrap"></div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button id="add-folder-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-transform transform hover:scale-105"><i class="fas fa-folder-plus mr-2"></i>Thư mục mới</button>
+                            <button id="add-deck-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-transform transform hover:scale-105"><i class="fas fa-layer-group mr-2"></i>Môn học mới</button>
+                            <button id="view-schedule-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-transform transform hover:scale-105"><i class="fas fa-calendar-alt mr-2"></i>Lịch ôn tập</button>
+                            <button id="ai-import-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-transform transform hover:scale-105"><i class="fas fa-wand-magic-sparkles mr-2"></i>Nhập bằng AI</button>
+                            <button id="subject-repetition-btn" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-transform transform hover:scale-105"><i class="fas fa-calendar-check mr-2"></i>Lịch học theo chủ đề</button>
+                        </div>
+                    </div>
+                    
+                    <!-- File List -->
+                    <div id="file-list" class="min-h-[300px] bg-gray-900/50 rounded-lg p-4">
+                        <!-- Items will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review View -->
+            <div id="review-view" class="hidden w-full max-w-2xl mx-auto relative pt-12">
+                 <button id="back-to-manager-btn" class="absolute top-0 left-0 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Quay lại
+                </button>
+                <div class="text-center mb-4">
+                    <p id="progress-text" class="text-gray-400"></p>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2"><div id="progress-bar" class="bg-indigo-500 h-2.5 rounded-full" style="width: 0%"></div></div>
+                </div>
+                <div id="flashcard-container" class="perspective-1000 w-full h-80 sm:h-96 cursor-pointer touch-none">
+                    <div id="flashcard" class="card relative w-full h-full">
+                        <div id="card-front" class="card-face absolute w-full h-full bg-gray-800 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-700">
+                            <button id="play-audio-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-10 transition-colors">
+                                <i class="fas fa-volume-high"></i>
+                            </button>
+                            <img id="card-front-image" class="max-w-full max-h-48 object-contain mb-4 rounded-lg hidden"/>
+                            <p id="card-front-text" class="text-2xl sm:text-3xl text-center text-white"></p>
+                        </div>
+                        <div id="card-back" class="card-face card-back absolute w-full h-full bg-gray-700 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-600">
+                             <p id="card-back-text" class="text-xl sm:text-2xl text-center text-gray-200"></p>
+                        </div>
+                    </div>
+                </div>
+                <div id="show-answer-container" class="mt-6 text-center"><button id="show-answer-btn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg">Hiển thị Đáp án</button></div>
+                <div id="rating-container" class="hidden mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button data-rating="3" class="btn-rating bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg">Dễ <span class="block text-xs text-gray-200"></span></button>
+                    <button data-rating="2" class="btn-rating bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Tốt <span class="block text-xs text-gray-200"></span></button>
+                    <button data-rating="1" class="btn-rating bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg">Khó <span class="block text-xs text-gray-200"></span></button>
+                    <button data-rating="0" class="btn-rating bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg">Rất khó <span class="block text-xs text-gray-200"></span></button>
+                </div>
+            </div>
+            
+            <!-- Completion View -->
+            <div id="completion-view" class="hidden text-center bg-gray-800 p-8 rounded-xl shadow-lg max-w-2xl mx-auto">
+                <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+                <h2 class="text-3xl font-bold text-white">Hoàn thành!</h2>
+                <p class="text-gray-300 mt-2">Bạn đã ôn tập xong tất cả các thẻ cho hôm nay. Làm tốt lắm!</p>
+                <button id="return-to-manager-btn" class="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg">Quay về Trang chính</button>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div id="modal-container">
+            <!-- Review Schedule Modal -->
+            <div id="review-schedule-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden">
+                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-4xl flex flex-col">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Lịch ôn tập theo mức độ</h3>
+                    <div class="flex flex-wrap gap-2 mb-4 border-b border-gray-700 pb-3">
+                        <button data-filter="all" class="filter-btn flex-grow bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Tất cả</button>
+                        <button data-filter="easy" class="filter-btn flex-grow bg-sky-700 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Dễ</button>
+                        <button data-filter="good" class="filter-btn flex-grow bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Tốt</button>
+                        <button data-filter="hard" class="filter-btn flex-grow bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">Khó</button>
+                        <button data-filter="super-hard" class="filter-btn flex-grow bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Rất khó</button>
+                    </div>
+                    <div id="schedule-list" class="flex-grow overflow-y-auto max-h-[60vh] space-y-2 pr-2"></div>
+                    <div class="flex justify-end pt-4 mt-2 border-t border-gray-700">
+                        <button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Đóng</button>
+                    </div>
+                </div>
+            </div>
+             <!-- Delete Confirmation Modal -->
+            <div id="delete-confirm-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Xác nhận Xóa</h3>
+                    <p id="delete-confirm-text" class="text-gray-300 mb-6"></p>
+                    <div class="flex justify-end space-x-4">
+                        <button id="cancel-delete-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Hủy</button>
+                        <button id="confirm-delete-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">Xóa</button>
+                    </div>
+                </div>
+            </div>
+            <!-- View Deck Modal -->
+            <div id="view-deck-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden">
+                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl flex flex-col">
+                    <h3 id="view-deck-title" class="text-2xl font-bold mb-4 text-white">Danh sách thẻ</h3>
+                    <div class="flex-grow overflow-y-auto max-h-[70vh]">
+                        <table class="w-full text-sm text-left text-gray-300">
+                            <thead class="text-xs text-gray-400 uppercase bg-gray-700 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">Mặt trước</th>
+                                    <th scope="col" class="px-6 py-3">Mặt sau</th>
+                                </tr>
+                            </thead>
+                            <tbody id="view-deck-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-end pt-4">
+                        <button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Đóng</button>
+                    </div>
+                </div>
+            </div>
+             <!-- AI Image Confirmation Modal -->
+            <div id="image-ai-confirm-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden">
+                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md">
+                    <h3 class="text-2xl font-bold mb-4 text-white">Tạo ảnh minh họa?</h3>
+                    <p class="text-gray-300 mb-6">Bạn có muốn AI tự động tìm và gán ảnh minh họa cho các thẻ mới không? (Nhanh hơn)</p>
+                    <div class="flex justify-end space-x-4">
+                        <button id="confirm-ai-add-no-image" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Không, chỉ thêm chữ</button>
+                        <button id="confirm-ai-add-with-image" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">Có, tìm ảnh</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Add/Edit Folder Modal -->
+            <div id="folder-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden"><div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md"><h3 class="text-2xl font-bold mb-6 text-white">Thư mục mới</h3><input id="folder-name-input" type="text" placeholder="Tên thư mục" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 mb-4 text-white focus:ring-indigo-500 focus:border-indigo-500"><div class="flex justify-end space-x-4"><button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button><button id="confirm-add-folder" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Lưu</button></div></div></div>
+            <!-- Add/Edit Deck Modal -->
+            <div id="deck-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden"><div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-md"><h3 class="text-2xl font-bold mb-6 text-white">Môn học mới</h3><input id="deck-name-input" type="text" placeholder="Tên môn học (ví dụ: Lịch sử)" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 mb-4 text-white focus:ring-indigo-500 focus:border-indigo-500"><div class="flex justify-end space-x-4"><button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button><button id="confirm-add-deck" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Lưu</button></div></div></div>
+            <!-- AI Import Modal -->
+            <div id="ai-import-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden"><div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-2xl"><h3 class="text-2xl font-bold mb-2 text-white">Nhập thẻ bằng AI</h3><p class="text-gray-400 mb-4">Dán văn bản hoặc tải ảnh lên. AI sẽ tự động tạo thẻ cho bạn.</p><div class="mb-4"><label for="ai-deck-select" class="block text-sm font-medium text-gray-300 mb-2">Chọn môn học để thêm thẻ:</label><select id="ai-deck-select" class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5"></select></div><textarea id="ai-text-input" placeholder="Dán văn bản vào đây..." class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 mb-4 text-white" rows="8"></textarea><div class="mb-4"><label class="block text-sm font-medium text-gray-400 mb-2">Hoặc tải ảnh lên:</label><input id="ai-image-input" type="file" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/></div><div class="flex justify-end space-x-4"><button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button><button id="confirm-ai-import" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"><i class="fas fa-cogs mr-2"></i>Xử lý</button></div></div></div>
+            <!-- AI Review Modal -->
+            <div id="ai-review-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden"><div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-3xl"><h3 class="text-2xl font-bold mb-4 text-white">Xem lại các thẻ do AI tạo</h3><div id="ai-review-list" class="max-h-[60vh] overflow-y-auto bg-gray-900/50 p-4 rounded-lg mb-4"></div><div class="flex justify-end space-x-4"><button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button><button id="ai-translate-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg hidden"><i class="fas fa-language mr-2"></i>Dịch & Thêm phiên âm</button><button id="confirm-ai-add" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Thêm các thẻ đã chọn</button></div></div></div>
+        </div>
+        
+        <!-- Notification Toast -->
+        <div id="notification-toast" class="fixed bottom-5 right-5 bg-indigo-600 text-white py-3 px-5 rounded-lg shadow-xl z-50"><p id="notification-text"></p></div>
+    </div>
+
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, query, where, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Config and Initialization ---
+        // This will be replaced by the environment's config
+        // Dán thông tin cấu hình Firebase của bạn vào đây
+        const firebaseConfig = {
+            apiKey: "AIzaSyDiXkXsVuE_oFvCRjjx5HF-IRyvE0owEQE",
+            authDomain: "laplaingatquang.firebaseapp.com",
+            projectId: "laplaingatquang",
+            storageBucket: "laplaingatquang.appspot.com",
+            messagingSenderId: "824449193335",
+            appId: "1:824449193335:web:80d2023aaa75dbb530fd72"
+        };
+
+        const appId = 'spaced-repetition-app-vietnamese';
+        
+        let app, auth, db;
+
+        // --- State Variables ---
+        let userId = null;
+        let currentFolderId = 'root';
+        let breadcrumbPath = [{ id: 'root', name: 'Trang chính' }];
+        let reviewQueue = [];
+        let currentCardIndex = 0;
+        let currentDeckForReview = null;
+        let aiGeneratedCards = [];
+        let allScheduledCards = [];
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let itemToDelete = { id: null, name: null, type: null };
+
+        // --- DOM Elements ---
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => document.querySelectorAll(selector);
+        
+        const loginContainer = $('#loginContainer');
+        const appContainer = $('#app');
+        const loginBtn = $('#loginBtn');
+        const logoutBtn = $('#logoutBtn');
+        const userInfo = {
+            container: $('#userInfo'),
+            name: $('#userName'),
+            email: $('#userEmail'),
+            avatar: $('#userAvatar'),
+        };
+
+        const loadingSpinner = $('#loading-spinner');
+        const loadingText = $('#loading-text');
+        
+        // Views
+        const fileManagerView = $('#file-manager-view');
+        const reviewView = $('#review-view');
+        const completionView = $('#completion-view');
+        
+        // File Manager
+        const breadcrumbEl = $('#breadcrumb');
+        const fileListEl = $('#file-list');
+        
+        // Review
+        const flashcardContainer = $('#flashcard-container');
+        const flashcard = $('#flashcard');
+        const cardFrontImage = $('#card-front-image');
+        const cardFrontText = $('#card-front-text');
+        const cardBackText = $('#card-back-text');
+        const showAnswerContainer = $('#show-answer-container');
+        const showAnswerBtn = $('#show-answer-btn');
+        const ratingContainer = $('#rating-container');
+        const progressText = $('#progress-text');
+        const progressBar = $('#progress-bar');
+        const playAudioBtn = $('#play-audio-btn');
+        
+        // Modals
+        const folderModal = $('#folder-modal');
+        const deckModal = $('#deck-modal');
+        const aiImportModal = $('#ai-import-modal');
+        const aiReviewModal = $('#ai-review-modal');
+        const viewDeckModal = $('#view-deck-modal');
+        const imageAiConfirmModal = $('#image-ai-confirm-modal');
+        const aiTranslateBtn = $('#ai-translate-btn');
+        const deleteConfirmModal = $('#delete-confirm-modal');
+        const deleteConfirmText = $('#delete-confirm-text');
+        const confirmDeleteBtn = $('#confirm-delete-btn');
+        const cancelDeleteBtn = $('#cancel-delete-btn');
+        const reviewScheduleModal = $('#review-schedule-modal');
+
+        // Spaced Repetition Logic (SM-2 variant)
+        const BASE_EASE_FACTOR = 2.5;
+        function calculateNextReview(card, rating) {
+            let { easeFactor, interval } = card;
+            easeFactor = easeFactor || BASE_EASE_FACTOR;
+            interval = interval || 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let newInterval;
+            if (rating === 0) { // Rất khó
+                newInterval = 1;
+                easeFactor = Math.max(1.3, easeFactor - 0.20);
+            } else if (rating === 1) { // Khó
+                newInterval = Math.ceil((interval || 1) * 1.2);
+                easeFactor = Math.max(1.3, easeFactor - 0.15);
+            } else if (rating === 2) { // Tốt
+                newInterval = (interval === 0) ? 1 : (interval < 6 ? 6 : Math.ceil(interval * easeFactor));
+            } else { // Dễ (rating === 3)
+                newInterval = Math.ceil((interval || 1) * (easeFactor + 0.15) * 1.5);
+                easeFactor += 0.15;
+            }
+
+            newInterval = Math.max(1, newInterval);
+            const nextReviewDate = new Date(today.getTime() + newInterval * 24 * 60 * 60 * 1000);
+            return {
+                ...card,
+                easeFactor,
+                interval: newInterval,
+                nextReviewDate: nextReviewDate.toISOString().split('T')[0],
+                lastReviewed: new Date().toISOString().split('T')[0]
+            };
+        }
+
+        // --- UI Functions ---
+        function showToast(message, duration = 3000) {
+            $('#notification-text').textContent = message;
+            $('#notification-toast').classList.add('show');
+            setTimeout(() => { $('#notification-toast').classList.remove('show'); }, duration);
+        }
+
+        function showView(view) {
+            fileManagerView.classList.add('hidden');
+            reviewView.classList.add('hidden');
+            completionView.classList.add('hidden');
+            view.classList.remove('hidden');
+        }
+
+        function showLoading(text = 'Đang xử lý...') {
+            loadingText.textContent = text;
+            loadingSpinner.classList.remove('hidden');
+            loadingSpinner.classList.add('flex', 'flex-col');
+        }
+
+        function hideLoading() {
+            loadingSpinner.classList.add('hidden');
+            loadingSpinner.classList.remove('flex', 'flex-col');
+        }
+
+        function openModal(modal) {
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal(modal) {
+            modal.classList.add('hidden');
+        }
+
+        function renderBreadcrumb() {
+            breadcrumbEl.innerHTML = '';
+            breadcrumbPath.forEach((part, index) => {
+                const isLast = index === breadcrumbPath.length - 1;
+                const partEl = document.createElement('span');
+                if (isLast) {
+                    partEl.className = 'font-semibold text-white';
+                    partEl.textContent = part.name;
+                } else {
+                    partEl.className = 'cursor-pointer hover:underline';
+                    partEl.textContent = part.name;
+                    partEl.onclick = () => navigateToFolder(part.id, index);
+                }
+                breadcrumbEl.appendChild(partEl);
+                if (!isLast) {
+                    const separator = document.createElement('span');
+                    separator.className = 'mx-2';
+                    separator.textContent = '/';
+                    breadcrumbEl.appendChild(separator);
+                }
+            });
+        }
+
+        async function renderFileManager() {
+            renderBreadcrumb();
+            fileListEl.innerHTML = '<div class="text-center text-gray-500 p-8">Đang tải...</div>';
+            const foldersRef = collection(db, `artifacts/${appId}/users/${userId}/folders`);
+            const decksRef = collection(db, `artifacts/${appId}/users/${userId}/decks`);
+            const qFolders = query(foldersRef, where("parentId", "==", currentFolderId));
+            const qDecks = query(decksRef, where("folderId", "==", currentFolderId));
+            try {
+                const [foldersSnapshot, decksSnapshot] = await Promise.all([getDocs(qFolders), getDocs(qDecks)]);
+                fileListEl.innerHTML = '';
+                if (foldersSnapshot.empty && decksSnapshot.empty) {
+                    fileListEl.innerHTML = '<div class="text-center text-gray-500 p-8">Thư mục này trống.</div>';
+                }
+                foldersSnapshot.forEach(doc => {
+                    fileListEl.appendChild(createFileItem(doc.id, doc.data().name, 'folder'));
+                });
+                for (const doc of decksSnapshot.docs) {
+                    const deckData = doc.data();
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${doc.id}/cards`);
+                    const qReview = query(cardsRef, where("nextReviewDate", "<=", todayStr));
+                    const reviewSnapshot = await getDocs(qReview);
+                    fileListEl.appendChild(createFileItem(doc.id, deckData.name, 'deck', reviewSnapshot.size));
+                }
+            } catch (error) {
+                console.error("Error rendering file manager:", error);
+                fileListEl.innerHTML = '<div class="text-center text-red-500 p-8">Lỗi tải dữ liệu.</div>';
+            }
+        }
+
+        function createFileItem(id, name, type, reviewCount = 0) {
+            const item = document.createElement('div');
+            item.className = 'file-item flex items-center p-3 rounded-lg cursor-pointer transition-colors duration-200';
+            const icon = type === 'folder' ? 'fa-folder text-sky-400' : 'fa-layer-group text-green-400';
+            
+            item.innerHTML = `
+                <i class="fas ${icon} fa-lg w-8"></i>
+                <span class="flex-grow truncate">${name}</span>
+                ${type === 'deck' ? `<span class="text-sm font-bold text-indigo-400 bg-indigo-900/50 px-2 py-1 rounded-full">${reviewCount}</span>` : ''}
+                <div class="item-actions flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button data-id="${id}" data-name="${name}" data-type="${type}" class="view-item-btn ml-4 text-gray-400 hover:text-sky-400" title="Xem danh sách thẻ"><i class="fas fa-eye"></i></button>
+                    <button data-id="${id}" data-name="${name}" data-type="${type}" class="delete-item-btn ml-2 text-gray-400 hover:text-red-500" title="Xóa"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+
+            item.addEventListener('mouseenter', () => item.classList.add('group'));
+            item.addEventListener('mouseleave', () => item.classList.remove('group'));
+            
+            item.querySelector('.delete-item-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                showDeleteConfirmation(id, name, type);
+            });
+            
+            const viewBtn = item.querySelector('.view-item-btn');
+            if (viewBtn) {
+                 viewBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (type === 'deck') {
+                        handleViewDeck(id, name);
+                    }
+                });
+            }
+            if (type !== 'deck') {
+                item.querySelector('.view-item-btn').style.display = 'none';
+            }
+
+            item.addEventListener('click', () => {
+                if (type === 'folder') {
+                    navigateToFolder(id, null, name);
+                } else {
+                    handleDeckClick(id, name, reviewCount);
+                }
+            });
+            return item;
+        }
+        
+        function displayCurrentCard() {
+            if (currentCardIndex >= reviewQueue.length) {
+                showView(completionView);
+                return;
+            }
+            const cardData = reviewQueue[currentCardIndex];
+            cardFrontText.textContent = cardData.front;
+            cardBackText.textContent = cardData.back;
+
+            if (cardData.frontImage) {
+                cardFrontImage.src = cardData.frontImage;
+                cardFrontImage.classList.remove('hidden');
+            } else {
+                cardFrontImage.classList.add('hidden');
+            }
+
+            flashcard.classList.remove('is-flipped');
+            flashcard.style.transform = '';
+            showAnswerContainer.classList.remove('hidden');
+            showAnswerBtn.textContent = "Hiển thị Đáp án";
+            ratingContainer.classList.add('hidden');
+            
+            progressText.textContent = `Thẻ ${currentCardIndex + 1} trên ${reviewQueue.length}`;
+            progressBar.style.width = `${((currentCardIndex + 1) / reviewQueue.length) * 100}%`;
+        }
+        
+        function toggleCardFlip() {
+            const isFlipped = flashcard.classList.toggle('is-flipped');
+            if (isFlipped) {
+                showAnswerBtn.textContent = "Ẩn Đáp án";
+                showAnswerContainer.classList.add('hidden');
+                ratingContainer.classList.remove('hidden');
+                updateRatingIntervals();
+            } else {
+                showAnswerBtn.textContent = "Hiển thị Đáp án";
+                showAnswerContainer.classList.remove('hidden');
+                ratingContainer.classList.add('hidden');
+            }
+        }
+        
+        function formatInterval(days) {
+            if (days <= 1) return "Ngày mai";
+            if (days <= 6) return `Trong ${days} ngày`;
+            
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + days);
+            return futureDate.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function updateRatingIntervals() {
+            const card = reviewQueue[currentCardIndex];
+            $$('#rating-container button').forEach(button => {
+                const rating = parseInt(button.dataset.rating);
+                const { interval } = calculateNextReview(card, rating);
+                button.querySelector('span').textContent = formatInterval(interval);
+            });
+        }
+        
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                const voices = window.speechSynthesis.getVoices();
+                const englishVoice = voices.find(voice => voice.lang.startsWith('en-'));
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                } else {
+                    utterance.lang = 'en-US';
+                }
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showToast('Trình duyệt của bạn không hỗ trợ phát âm thanh.');
+            }
+        }
+
+        // --- Event & Action Handlers ---
+        function navigateToFolder(folderId, breadcrumbIndex, folderName) {
+            currentFolderId = folderId;
+            if (breadcrumbIndex != null) {
+                breadcrumbPath = breadcrumbPath.slice(0, breadcrumbIndex + 1);
+            } else {
+                breadcrumbPath.push({ id: folderId, name: folderName });
+            }
+            renderFileManager();
+        }
+
+        async function handleDeckClick(deckId, deckName, reviewCount) {
+            if (reviewCount > 0) {
+                showLoading(`Đang tải ${reviewCount} thẻ ôn tập...`);
+                const todayStr = new Date().toISOString().split('T')[0];
+                const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${deckId}/cards`);
+                const q = query(cardsRef, where("nextReviewDate", "<=", todayStr));
+                const snapshot = await getDocs(q);
+                reviewQueue = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                currentCardIndex = 0;
+                currentDeckForReview = deckId;
+                showView(reviewView);
+                displayCurrentCard();
+                hideLoading();
+            } else {
+                showToast(`Môn học "${deckName}" không có thẻ nào cần ôn tập hôm nay.`);
+            }
+        }
+        
+        async function handleViewDeck(deckId, deckName) {
+            showLoading(`Đang tải thẻ môn ${deckName}...`);
+            $('#view-deck-title').textContent = `Thẻ môn: ${deckName}`;
+            const tableBody = $('#view-deck-table-body');
+            tableBody.innerHTML = '';
+            
+            try {
+                const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${deckId}/cards`);
+                const snapshot = await getDocs(cardsRef);
+                if (snapshot.empty) {
+                    tableBody.innerHTML = '<tr><td colspan="2" class="text-center p-4">Môn học này chưa có thẻ nào.</td></tr>';
+                } else {
+                    snapshot.forEach(doc => {
+                        const card = doc.data();
+                        const row = `
+                            <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-600">
+                                <td class="px-6 py-4 font-medium text-white whitespace-nowrap">${card.front}</td>
+                                <td class="px-6 py-4">${card.back}</td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                }
+                openModal(viewDeckModal);
+            } catch (error) {
+                console.error("Error viewing deck:", error);
+                showToast("Lỗi khi tải danh sách thẻ.");
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function showDeleteConfirmation(id, name, type) {
+            itemToDelete = { id, name, type };
+            deleteConfirmText.textContent = `Bạn có chắc muốn xóa ${type === 'folder' ? 'thư mục' : 'môn học'} "${name}" không? Thao tác này sẽ xóa toàn bộ dữ liệu bên trong và không thể hoàn tác.`;
+            openModal(deleteConfirmModal);
+        }
+
+        async function executeDelete() {
+            const { id, name, type } = itemToDelete;
+            if (!id) return;
+
+            closeModal(deleteConfirmModal);
+            showLoading(`Đang xóa ${name}...`);
+            try {
+                if (type === 'folder') {
+                    // Recursive delete is complex. For now, we delete the folder doc.
+                    // A proper implementation would use a cloud function for recursive deletion.
+                    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/folders`, id));
+                } else { // type === 'deck'
+                    const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${id}/cards`);
+                    const cardsSnapshot = await getDocs(cardsRef);
+                    const batch = writeBatch(db);
+                    cardsSnapshot.forEach(cardDoc => {
+                        batch.delete(cardDoc.ref);
+                    });
+                    await batch.commit();
+                    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/decks`, id));
+                }
+                showToast(`Đã xóa "${name}" thành công.`);
+                renderFileManager();
+            } catch (error) {
+                console.error("Error deleting item:", error);
+                showToast("Lỗi khi xóa. Vui lòng thử lại.");
+            } finally {
+                itemToDelete = { id: null, name: null, type: null };
+                hideLoading();
+            }
+        }
+
+        async function handleRatingClick(rating) {
+            const card = reviewQueue[currentCardIndex];
+            const updatedCard = calculateNextReview(card, rating);
+            try {
+                const cardRef = doc(db, `artifacts/${appId}/users/${userId}/decks/${currentDeckForReview}/cards`, card.id);
+                await setDoc(cardRef, updatedCard, { merge: true });
+                showToast(`Đã lên lịch ôn tập lại vào ${formatInterval(updatedCard.interval)}.`);
+                currentCardIndex++;
+                displayCurrentCard();
+            } catch (error) {
+                console.error("Error updating card: ", error);
+                showToast("Lỗi khi cập nhật thẻ.");
+            }
+        }
+        
+        async function handleViewSchedule() {
+            showLoading("Đang tải lịch ôn tập...");
+            try {
+                const decksRef = collection(db, `artifacts/${appId}/users/${userId}/decks`);
+                const decksSnapshot = await getDocs(decksRef);
+                
+                const cardPromises = decksSnapshot.docs.map(async (deckDoc) => {
+                    const deckData = deckDoc.data();
+                    const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${deckDoc.id}/cards`);
+                    const cardsSnapshot = await getDocs(cardsRef);
+                    return cardsSnapshot.docs.map(cardDoc => ({
+                        ...cardDoc.data(),
+                        id: cardDoc.id,
+                        deckName: deckData.name
+                    }));
+                });
+                
+                const cardArrays = await Promise.all(cardPromises);
+                allScheduledCards = cardArrays.flat();
+                
+                renderScheduleList('all');
+                $$('#review-schedule-modal .filter-btn').forEach(btn => btn.classList.remove('active'));
+                $(`#review-schedule-modal .filter-btn[data-filter='all']`).classList.add('active');
+
+                openModal(reviewScheduleModal);
+            } catch (error) {
+                console.error("Error loading schedule:", error);
+                showToast("Không thể tải lịch ôn tập.");
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function renderScheduleList(filter) {
+            const listEl = $('#schedule-list');
+            listEl.innerHTML = '';
+
+            let filtered = [];
+            switch (filter) {
+                case 'easy':
+                    filtered = allScheduledCards.filter(c => (c.easeFactor || BASE_EASE_FACTOR) > 2.5);
+                    break;
+                case 'good':
+                    filtered = allScheduledCards.filter(c => (c.easeFactor || BASE_EASE_FACTOR) === 2.5);
+                    break;
+                case 'hard':
+                    filtered = allScheduledCards.filter(c => {
+                        const ease = c.easeFactor || BASE_EASE_FACTOR;
+                        return ease < 2.5 && c.interval > 1;
+                    });
+                    break;
+                case 'super-hard':
+                    filtered = allScheduledCards.filter(c => c.interval === 1);
+                    break;
+                case 'all':
+                default:
+                    filtered = allScheduledCards;
+                    break;
+            }
+
+            filtered.sort((a, b) => new Date(a.nextReviewDate) - new Date(b.nextReviewDate));
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div class="text-center text-gray-500 p-8">Không có thẻ nào trong mục này.</div>';
+                return;
+            }
+
+            filtered.forEach(card => {
+                const item = document.createElement('div');
+                item.className = 'bg-gray-900/70 p-3 rounded-lg flex items-center justify-between';
+                const reviewDate = new Date(card.nextReviewDate + 'T00:00:00').toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                
+                let difficultyColor = 'bg-gray-500';
+                const ease = card.easeFactor || BASE_EASE_FACTOR;
+                if (card.interval === 1) difficultyColor = 'bg-red-500';
+                else if (ease < 2.5) difficultyColor = 'bg-orange-500';
+                else if (ease > 2.5) difficultyColor = 'bg-sky-500';
+                else difficultyColor = 'bg-green-500';
+
+                item.innerHTML = `
+                    <div class="flex items-center min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full ${difficultyColor} mr-4 flex-shrink-0"></span>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-white truncate">${card.front}</p>
+                            <p class="text-sm text-gray-400 truncate">${card.back}</p>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-4">
+                        <p class="text-sm font-bold text-indigo-400">${reviewDate}</p>
+                        <p class="text-xs text-gray-500 truncate">${card.deckName}</p>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        // --- Gemini & Image API Calls ---
+        async function callApi(url, payload) {
+            const apiKey = "AIzaSyAFavlPk2DLCsZHdmpKrlwjwzQGO02ukio"; // Canvas will provide this
+            const finalUrl = `${url}?key=${apiKey}`;
+            try {
+                const response = await fetch(finalUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                return await response.json();
+            } catch (error) {
+                console.error("API call failed:", error);
+                throw error;
+            }
+        }
+        
+        async function findImageForCard(term) {
+             try {
+                // Using a generic term for better results
+                const searchPrompt = `A clear, simple, high-quality photograph or illustration representing the concept of "${term}"`;
+                const payload = { instances: [{ prompt: searchPrompt }], parameters: { "sampleCount": 1} };
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
+                const result = await callApi(apiUrl, payload);
+
+                if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                }
+                return null;
+             } catch (error) {
+                 console.error("Imagen fetch failed for term:", term, error);
+                 return null;
+             }
+        }
+
+        // --- Image to Base64 ---
+        function imageToBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (file.size > 4 * 1024 * 1024) { // 4MB limit
+                    return reject(new Error("Kích thước ảnh không được vượt quá 4MB."));
+                }
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+        
+        // --- Initialization & Auth ---
+        async function signInWithGoogle() {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Lỗi khi đăng nhập với Google:", error);
+                showToast("Đăng nhập thất bại. Vui lòng thử lại.");
+            }
+        }
+
+        async function signOutUser() {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Lỗi khi đăng xuất:", error);
+                showToast("Đăng xuất thất bại.");
+            }
+        }
+
+        async function initializeAppForUser() {
+            await checkForInitialData();
+            await renderFileManager();
+            hideLoading();
+            appContainer.classList.remove('hidden');
+        }
+
+        async function checkForInitialData() {
+            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}`);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists() && userDoc.data().initialized_pro_v1) return;
+            
+            showLoading("Đang thiết lập tài khoản lần đầu...");
+            const batch = writeBatch(db);
+            const folderId = doc(collection(db, `artifacts/${appId}/users/${userId}/folders`)).id;
+            batch.set(doc(db, `artifacts/${appId}/users/${userId}/folders`, folderId), { name: "Học tập cơ bản", parentId: "root", createdAt: new Date().toISOString() });
+            const deckId = doc(collection(db, `artifacts/${appId}/users/${userId}/decks`)).id;
+            batch.set(doc(db, `artifacts/${appId}/users/${userId}/decks`, deckId), { name: "Từ vựng Anh Văn", folderId: folderId, createdAt: new Date().toISOString() });
+            const cards = [{f: "Hello", b: "/həˈloʊ/ Xin chào"}, {f: "Goodbye", b: "/ɡʊdˈbaɪ/ Tạm biệt"}];
+            const todayStr = new Date().toISOString().split('T')[0];
+            cards.forEach(c => {
+                 const cardRef = doc(collection(db, `artifacts/${appId}/users/${userId}/decks/${deckId}/cards`));
+                 batch.set(cardRef, { front: c.f, back: c.b, nextReviewDate: todayStr, interval: 0, easeFactor: BASE_EASE_FACTOR });
+            });
+            batch.set(userDocRef, { initialized_pro_v1: true }, { merge: true });
+            await batch.commit();
+            showToast("Chào mừng! Đã tạo dữ liệu mẫu cho bạn.");
+        }
+        
+        async function addAiCardsToFirestore(shouldFindImages) {
+            const selectedDeckId = $('#ai-deck-select').value;
+            if (!selectedDeckId) {
+                showToast("Lỗi: Không có môn học nào được chọn.");
+                return;
+            }
+            showLoading(shouldFindImages ? "AI đang tìm ảnh và thêm thẻ..." : "Đang thêm thẻ...");
+            
+            const batch = writeBatch(db);
+            const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${selectedDeckId}/cards`);
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            let cardsToAdd = [];
+            aiGeneratedCards.forEach((card, index) => {
+                if ($(`#card-check-${index}`).checked) {
+                    cardsToAdd.push(card);
+                }
+            });
+
+            for(const card of cardsToAdd) {
+                const newCardRef = doc(cardsRef);
+                const newCardData = {
+                    front: card.front,
+                    back: card.back,
+                    nextReviewDate: todayStr,
+                    interval: 0,
+                    easeFactor: BASE_EASE_FACTOR,
+                    createdAt: new Date().toISOString(),
+                    frontImage: null
+                };
+                if (shouldFindImages) {
+                    const imageUrl = await findImageForCard(card.front);
+                    if (imageUrl) {
+                        newCardData.frontImage = imageUrl;
+                    }
+                }
+                batch.set(newCardRef, newCardData);
+            }
+            
+            try {
+                await batch.commit();
+                showToast(`Đã thêm ${cardsToAdd.length} thẻ mới thành công!`);
+                closeModal(aiReviewModal);
+                $('#ai-text-input').value = '';
+                $('#ai-image-input').value = '';
+                renderFileManager();
+            } catch (error) {
+                console.error("Error adding AI cards:", error);
+                showToast("Lỗi khi lưu thẻ.");
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function renderAiReviewList() {
+            const reviewList = $('#ai-review-list');
+            reviewList.innerHTML = '';
+            let needsTranslation = false;
+            aiGeneratedCards.forEach((card, index) => {
+                if (card.back && !card.back.includes('/')) {
+                    needsTranslation = true;
+                }
+                reviewList.innerHTML += `
+                    <div class="bg-gray-700 p-3 rounded-lg mb-2"><div class="flex items-start">
+                        <input type="checkbox" checked id="card-check-${index}" class="mt-1.5 mr-3 h-4 w-4 rounded border-gray-500 text-indigo-600 focus:ring-indigo-500">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-white">${card.front}</p>
+                            <p class="text-gray-300">${card.back}</p>
+                        </div>
+                    </div></div>`;
+            });
+            aiTranslateBtn.classList.toggle('hidden', !needsTranslation);
+        }
+
+        // --- App Entry Point & Event Listeners ---
+        async function main() {
+             if (!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("YOUR_")) {
+                document.body.innerHTML = '<div class="text-center p-8 text-red-500 font-bold">Lỗi: Cấu hình Firebase không hợp lệ. Vui lòng kiểm tra lại.</div>';
+                return;
+            }
+            
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                await setPersistence(auth, browserLocalPersistence);
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                document.body.innerHTML = '<div class="text-center p-8 text-red-500 font-bold">Không thể kết nối tới cơ sở dữ liệu.</div>';
+                return;
+            }
+
+            // Pre-load speech synthesis voices
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = () => {
+                    window.speechSynthesis.getVoices();
+                };
+            }
+
+            // Setup all event listeners
+            loginBtn.addEventListener('click', signInWithGoogle);
+            logoutBtn.addEventListener('click', signOutUser);
+            
+            // NEW: Event listener for the new button
+            $('#subject-repetition-btn').addEventListener('click', () => {
+                window.location.href = 'laplaingatquangGoogle.html';
+            });
+
+            // Modal Cancel Buttons
+            $$('.modal-cancel').forEach(btn => btn.addEventListener('click', () => {
+                btn.closest('.fixed').classList.add('hidden');
+            }));
+
+            // Delete Confirmation
+            confirmDeleteBtn.addEventListener('click', executeDelete);
+            cancelDeleteBtn.addEventListener('click', () => closeModal(deleteConfirmModal));
+
+            // Add Folder/Deck
+            $('#add-folder-btn').addEventListener('click', () => openModal(folderModal));
+            $('#confirm-add-folder').addEventListener('click', async () => {
+                const name = $('#folder-name-input').value.trim();
+                if (!name) return;
+                try {
+                    await addDoc(collection(db, `artifacts/${appId}/users/${userId}/folders`), { name, parentId: currentFolderId, createdAt: new Date().toISOString() });
+                    $('#folder-name-input').value = ''; closeModal(folderModal); showToast(`Đã thêm thư mục "${name}"`);
+                    renderFileManager();
+                } catch (e) { showToast("Lỗi khi thêm thư mục."); }
+            });
+            $('#add-deck-btn').addEventListener('click', () => openModal(deckModal));
+            $('#confirm-add-deck').addEventListener('click', async () => {
+                const name = $('#deck-name-input').value.trim();
+                if (!name) return;
+                try {
+                    await addDoc(collection(db, `artifacts/${appId}/users/${userId}/decks`), { name, folderId: currentFolderId, createdAt: new Date().toISOString() });
+                    $('#deck-name-input').value = ''; closeModal(deckModal); showToast(`Đã thêm môn học "${name}"`);
+                    renderFileManager();
+                } catch (e) { showToast("Lỗi khi thêm môn học."); }
+            });
+
+            // Schedule Modal
+            $('#view-schedule-btn').addEventListener('click', handleViewSchedule);
+            $$('#review-schedule-modal .filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    $$('#review-schedule-modal .filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderScheduleList(btn.dataset.filter);
+                });
+            });
+
+            // AI Import
+            $('#ai-import-btn').addEventListener('click', async () => {
+                const decksRef = collection(db, `artifacts/${appId}/users/${userId}/decks`);
+                const snapshot = await getDocs(decksRef);
+                const select = $('#ai-deck-select');
+                select.innerHTML = '';
+                if (snapshot.empty) {
+                    select.innerHTML = '<option disabled>Vui lòng tạo một môn học trước</option>';
+                    $('#confirm-ai-import').disabled = true;
+                } else {
+                    snapshot.forEach(doc => {
+                        select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+                    });
+                    $('#confirm-ai-import').disabled = false;
+                }
+                openModal(aiImportModal);
+            });
+
+            $('#confirm-ai-import').addEventListener('click', async () => {
+                const text = $('#ai-text-input').value.trim();
+                const imageFile = $('#ai-image-input').files[0];
+                if (!text && !imageFile) {
+                    showToast("Vui lòng nhập văn bản hoặc tải ảnh lên."); return;
+                }
+                
+                let prompt;
+                let parts = [];
+
+                if (text) {
+                    prompt = `You are a flashcard creation assistant. The user has provided a block of text where each vocabulary entry is separated by one or more blank lines. For each entry, the first line is the term (the 'front' of the card), and the following line(s) contain the definition, pronunciation, and meaning (the 'back' of the card). Your task is to parse this text and convert it into a structured JSON format. Example Input Text:\ncelebrate\n/ˌsel.əˈbreɪ/ ăn mừng, kỷ niệm\n\nanniversary\n/ˌæn.ɪˈvɜː.sər.i/ ngày kỷ niệm\nYour output must be a JSON object with a single key 'flashcards', which is an array of objects. Each object must have 'front' and 'back' keys. Now, process the following text and generate the JSON output accordingly:\n\n${text}`;
+                    parts.push({ text: prompt });
+                } else if (imageFile) {
+                    prompt = "From the image provided, extract key concepts and create flashcards. The front should be a question or term, and the back should be the answer or definition, including pronunciation if applicable (e.g., /pro.nun.ci.a.tion/ meaning). Provide the output as a JSON object with a single key 'flashcards' which is an array of objects, each with 'front' and 'back' keys.";
+                    const base64 = await imageToBase64(imageFile);
+                    parts.push({ text: prompt });
+                    parts.push({ inlineData: { mimeType: imageFile.type, data: base64 } });
+                }
+
+                showLoading("AI đang phân tích...");
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+                    const payload = {
+                        contents: [{ role: "user", parts: parts }],
+                        generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { flashcards: { type: "ARRAY", items: { type: "OBJECT", properties: { front: { type: "STRING" }, back: { type: "STRING" } }, required: ["front", "back"] } } } } }
+                    };
+                    const result = await callApi(url, payload);
+                    const cards = JSON.parse(result.candidates[0].content.parts[0].text).flashcards;
+                    if (cards && cards.length > 0) {
+                        aiGeneratedCards = cards;
+                        renderAiReviewList();
+                        closeModal(aiImportModal);
+                        openModal(aiReviewModal);
+                    } else {
+                        showToast("AI không tìm thấy thẻ nào để tạo.");
+                    }
+                } catch (error) {
+                    showToast("AI không thể xử lý yêu cầu. Vui lòng thử lại.");
+                } finally {
+                    hideLoading();
+                }
+            });
+            
+            aiTranslateBtn.addEventListener('click', async () => {
+                const wordsToTranslate = [];
+                 aiGeneratedCards.forEach((card, index) => {
+                    if ($(`#card-check-${index}`).checked && card.back && !card.back.includes('/')) {
+                        wordsToTranslate.push(card.front);
+                    }
+                });
+                if (wordsToTranslate.length === 0) { showToast("Không có từ nào cần dịch."); return; }
+                
+                showLoading("AI đang dịch...");
+                try {
+                    const prompt = `For the following list of English words, provide their Vietnamese meaning and IPA phonetic transcription. Words: ${wordsToTranslate.join(', ')}. Respond with a JSON object with a single key 'translations', which is an array of objects. Each object must have two keys: 'original' (the English word) and 'translation' (a string formatted as '/phonetic/ vietnamese meaning').`;
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { translations: { type: "ARRAY", items: { type: "OBJECT", properties: { original: { type: "STRING" }, translation: { type: "STRING" } }, required: ["original", "translation"] } } } } }
+                    };
+                    const result = await callApi(url, payload);
+                    const translations = JSON.parse(result.candidates[0].content.parts[0].text).translations;
+                    const translationMap = new Map(translations.map(t => [t.original.toLowerCase(), t.translation]));
+                    aiGeneratedCards.forEach(card => {
+                        const translated = translationMap.get(card.front.toLowerCase());
+                        if (translated) card.back = translated;
+                    });
+                    renderAiReviewList();
+                } catch (error) { showToast("Lỗi khi dịch. Vui lòng thử lại."); } finally { hideLoading(); }
+            });
+
+            $('#confirm-ai-add').addEventListener('click', () => { closeModal(aiReviewModal); openModal(imageAiConfirmModal); });
+            $('#confirm-ai-add-no-image').addEventListener('click', () => { closeModal(imageAiConfirmModal); addAiCardsToFirestore(false); });
+            $('#confirm-ai-add-with-image').addEventListener('click', () => { closeModal(imageAiConfirmModal); addAiCardsToFirestore(true); });
+
+            // Review Screen Logic
+            playAudioBtn.addEventListener('click', (e) => { e.stopPropagation(); const textToSpeak = cardFrontText.textContent; if (textToSpeak) speakText(textToSpeak); });
+            flashcardContainer.addEventListener('click', toggleCardFlip);
+            showAnswerBtn.addEventListener('click', toggleCardFlip);
+            ratingContainer.addEventListener('click', (e) => { if (e.target.closest('button')) handleRatingClick(parseInt(e.target.closest('button').dataset.rating)); });
+            $('#back-to-manager-btn').addEventListener('click', () => { showView(fileManagerView); renderFileManager(); });
+            $('#return-to-manager-btn').addEventListener('click', () => { showView(fileManagerView); renderFileManager(); });
+            
+            // Swipe Logic
+            flashcardContainer.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+            flashcardContainer.addEventListener('touchmove', e => { if (!flashcard.classList.contains('is-flipped')) return; const deltaX = e.changedTouches[0].screenX - touchStartX; flashcard.classList.add('swiping'); flashcard.style.transform = `rotateY(180deg) translateX(${deltaX}px) rotate(${deltaX / 20}deg)`; }, { passive: true });
+            flashcardContainer.addEventListener('touchend', e => { if (!flashcard.classList.contains('is-flipped')) return; touchEndX = e.changedTouches[0].screenX; const deltaX = touchEndX - touchStartX; flashcard.classList.remove('swiping'); flashcard.style.transform = 'rotateY(180deg)'; if (Math.abs(deltaX) > 100) { if (deltaX < 0) handleRatingClick(3); else handleRatingClick(0); } });
+
+            // Auth State Change Listener
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    loginContainer.classList.add('hidden');
+                    
+                    userInfo.name.textContent = user.displayName;
+                    userInfo.email.textContent = user.email;
+                    userInfo.avatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=4f46e5&color=fff`;
+                    
+                    showLoading('Đang tải dữ liệu của bạn...');
+                    await initializeAppForUser();
+                    lucide.createIcons();
+
+                } else {
+                    userId = null;
+                    appContainer.classList.add('hidden');
+                    loginContainer.classList.remove('hidden');
+                }
+            });
+        }
+
+        main();
+    </script>
+</body>
+</html>
