@@ -147,14 +147,14 @@
                 </div>
                 <div id="flashcard-container" class="perspective-1000 w-full h-80 sm:h-96 touch-none">
                     <div id="flashcard" class="card relative w-full h-full">
-                        <div id="card-front" class="card-face absolute w-full h-full bg-gray-800 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-700 cursor-pointer">
+                        <div id="card-front" class="card-face absolute w-full h-full bg-gray-800 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-700">
                             <button id="play-audio-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-10 transition-colors">
                                 <i class="fas fa-volume-high"></i>
                             </button>
                             <img id="card-front-image" class="max-w-full max-h-48 object-contain mb-4 rounded-lg hidden"/>
                             <p id="card-front-text" class="text-2xl sm:text-3xl text-center text-white"></p>
                         </div>
-                        <div id="card-back" class="card-face card-back absolute w-full h-full bg-gray-700 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-600 cursor-pointer">
+                        <div id="card-back" class="card-face card-back absolute w-full h-full bg-gray-700 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-600">
                              <p id="card-back-text" class="text-xl sm:text-2xl text-center text-gray-200"></p>
                         </div>
                     </div>
@@ -319,7 +319,6 @@
         let isDragging = false;
         let startX = 0;
         let currentX = 0;
-        // NEW: State to distinguish a click from a drag
         let isCardClickable = true;
 
 
@@ -788,7 +787,7 @@
             try {
                 const cardRef = doc(db, `artifacts/${appId}/users/${userId}/decks/${currentDeckForReview}/cards`, card.id);
                 await setDoc(cardRef, updatedCard, { merge: true });
-                showToast(`Đã lên lịch ôn tập lại vào ${formatInterval(updatedCard.interval)}.`);
+                // showToast(`Đã lên lịch ôn tập lại vào ${formatInterval(updatedCard.interval)}.`);
                 currentCardIndex++;
                 displayCurrentCard();
             } catch (error) {
@@ -1092,25 +1091,34 @@
             flashcard.style.transform = `translateX(${deltaX}px) ${rotationY} rotate(${deltaX / 20}deg)`;
         }
 
-        function dragEnd() {
+        function dragEnd(e) {
             if (!isDragging) return;
             isDragging = false;
-            const deltaX = currentX - startX;
             
             flashcard.classList.remove('swiping');
             
-            // Only advance the card if it was a significant swipe
-            if (Math.abs(deltaX) > 100) {
-                if (deltaX > 0) { rateAndAdvance(3); } 
-                else { rateAndAdvance(1); }
+            // Check if it was a valid tap (isCardClickable is true)
+            if (isCardClickable) {
+                // Check if the event target is the card itself, not a button on it
+                if (!e.target.closest('button')) {
+                    toggleCardFlip();
+                }
             } else {
-                // If it wasn't a swipe, just reset the card's position
-                flashcard.classList.add('resetting');
-                const finalRotation = flashcard.classList.contains('is-flipped') ? 'rotateY(180deg)' : 'rotateY(0deg)';
-                flashcard.style.transform = finalRotation;
-                setTimeout(() => flashcard.classList.remove('resetting'), 300);
+                const deltaX = currentX - startX;
+                // Check for a significant swipe to rate the card.
+                if (Math.abs(deltaX) > 100) {
+                    if (deltaX > 0) { rateAndAdvance(3); } 
+                    else { rateAndAdvance(1); }
+                } else {
+                    // If it was a small drag, just reset the card's position
+                    flashcard.classList.add('resetting');
+                    const finalRotation = flashcard.classList.contains('is-flipped') ? 'rotateY(180deg)' : 'rotateY(0deg)';
+                    flashcard.style.transform = finalRotation;
+                    setTimeout(() => flashcard.classList.remove('resetting'), 300);
+                }
             }
             
+            // Reset state for the next interaction
             startX = 0;
             currentX = 0;
         }
@@ -1290,19 +1298,6 @@
             });
 
             // Review Screen Logic
-            playAudioBtn.addEventListener('click', (e) => { 
-                e.stopPropagation(); 
-                const textToSpeak = cardFrontText.textContent; 
-                if (textToSpeak) speakText(textToSpeak); 
-            });
-            
-            // UPDATED: New click listener to handle flips safely
-            flashcardContainer.addEventListener('click', (e) => {
-                if (isCardClickable) {
-                    toggleCardFlip();
-                }
-            });
-
             ratingContainer.addEventListener('click', (e) => { 
                 if (e.target.closest('button')) {
                     rateAndAdvance(parseInt(e.target.closest('button').dataset.rating));
@@ -1312,6 +1307,9 @@
             $('#back-to-manager-btn').addEventListener('click', () => { showView(fileManagerView); renderFileManager(); });
             $('#return-to-manager-btn').addEventListener('click', () => { showView(fileManagerView); renderFileManager(); });
             
+            // UPDATED: Removed separate click listener
+            // All logic is now handled in the drag/touch handlers
+
             // Swipe/Drag Event Listeners
             flashcardContainer.addEventListener('mousedown', dragStart);
             document.addEventListener('mousemove', dragMove);
