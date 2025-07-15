@@ -25,6 +25,10 @@
         .card.is-flipped {
             transform: rotateY(180deg);
         }
+        /* Add transition for swipe reset */
+        .card.resetting {
+            transition: transform 0.3s ease-out;
+        }
         .card-face {
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
@@ -55,6 +59,7 @@
         .file-item:hover {
             background-color: #374151;
         }
+        /* Disable transition during active swipe/drag */
         #flashcard.swiping {
              transition: none;
         }
@@ -140,22 +145,22 @@
                     <p id="progress-text" class="text-gray-400"></p>
                     <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2"><div id="progress-bar" class="bg-indigo-500 h-2.5 rounded-full" style="width: 0%"></div></div>
                 </div>
-                <div id="flashcard-container" class="perspective-1000 w-full h-80 sm:h-96 cursor-pointer touch-none">
+                <div id="flashcard-container" class="perspective-1000 w-full h-80 sm:h-96 touch-none">
                     <div id="flashcard" class="card relative w-full h-full">
-                        <div id="card-front" class="card-face absolute w-full h-full bg-gray-800 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-700">
+                        <div id="card-front" class="card-face absolute w-full h-full bg-gray-800 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-700 cursor-pointer">
                             <button id="play-audio-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl z-10 transition-colors">
                                 <i class="fas fa-volume-high"></i>
                             </button>
                             <img id="card-front-image" class="max-w-full max-h-48 object-contain mb-4 rounded-lg hidden"/>
                             <p id="card-front-text" class="text-2xl sm:text-3xl text-center text-white"></p>
                         </div>
-                        <div id="card-back" class="card-face card-back absolute w-full h-full bg-gray-700 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-600">
+                        <div id="card-back" class="card-face card-back absolute w-full h-full bg-gray-700 rounded-xl shadow-lg flex flex-col items-center justify-center p-6 border border-gray-600 cursor-pointer">
                              <p id="card-back-text" class="text-xl sm:text-2xl text-center text-gray-200"></p>
                         </div>
                     </div>
                 </div>
-                <div id="show-answer-container" class="mt-6 text-center"><button id="show-answer-btn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg">Hiển thị Đáp án</button></div>
-                <div id="rating-container" class="hidden mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- UPDATED: Rating container is now always visible -->
+                <div id="rating-container" class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                     <button data-rating="3" class="btn-rating bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg">Dễ <span class="block text-xs text-gray-200"></span></button>
                     <button data-rating="2" class="btn-rating bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">Tốt <span class="block text-xs text-gray-200"></span></button>
                     <button data-rating="1" class="btn-rating bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg">Khó <span class="block text-xs text-gray-200"></span></button>
@@ -204,7 +209,7 @@
             </div>
             <!-- View Deck Modal -->
             <div id="view-deck-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-40 hidden">
-                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-3xl flex flex-col">
+                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-4xl flex flex-col">
                     <h3 id="view-deck-title" class="text-2xl font-bold mb-4 text-white">Danh sách thẻ</h3>
                     <div class="flex-grow overflow-y-auto max-h-[70vh]">
                         <table class="w-full text-sm text-left text-gray-300">
@@ -212,13 +217,35 @@
                                 <tr>
                                     <th scope="col" class="px-6 py-3">Mặt trước</th>
                                     <th scope="col" class="px-6 py-3">Mặt sau</th>
+                                    <th scope="col" class="px-6 py-3 text-center">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody id="view-deck-table-body"></tbody>
                         </table>
                     </div>
-                    <div class="flex justify-end pt-4">
+                    <div class="flex justify-end pt-4 mt-2 border-t border-gray-700 gap-4">
+                        <button id="copy-deck-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex items-center"><i class="fas fa-copy mr-2"></i>Sao chép</button>
                         <button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Đóng</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Edit Card Modal -->
+            <div id="edit-card-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+                <div class="modal-content bg-gray-800 rounded-lg shadow-xl p-8 w-full max-w-lg">
+                    <h3 class="text-2xl font-bold mb-6 text-white">Chỉnh sửa thẻ</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="edit-card-front" class="block text-sm font-medium text-gray-300 mb-1">Mặt trước</label>
+                            <input id="edit-card-front" type="text" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="edit-card-back" class="block text-sm font-medium text-gray-300 mb-1">Mặt sau</label>
+                            <input id="edit-card-back" type="text" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-4 mt-8">
+                        <button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button>
+                        <button id="confirm-edit-card" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Lưu thay đổi</button>
                     </div>
                 </div>
             </div>
@@ -246,7 +273,6 @@
                     <div id="ai-review-list" class="max-h-[60vh] overflow-y-auto bg-gray-900/50 p-4 rounded-lg mb-4"></div>
                     <div class="flex justify-end space-x-4">
                         <button class="modal-cancel bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Hủy</button>
-                        <!-- Nút dịch đã bị xóa vì logic mới không cần đến nó -->
                         <button id="confirm-ai-add" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Thêm các thẻ đã chọn</button>
                     </div>
                 </div>
@@ -261,11 +287,9 @@
         // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, query, where, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, query, where, writeBatch, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Config and Initialization ---
-        // This will be replaced by the environment's config
-        // Dán thông tin cấu hình Firebase của bạn vào đây
         const firebaseConfig = {
             apiKey: "AIzaSyDiXkXsVuE_oFvCRjjx5HF-IRyvE0owEQE",
             authDomain: "laplaingatquang.firebaseapp.com",
@@ -288,9 +312,16 @@
         let currentDeckForReview = null;
         let aiGeneratedCards = [];
         let allScheduledCards = [];
-        let touchStartX = 0;
-        let touchEndX = 0;
-        let itemToDelete = { id: null, name: null, type: null };
+        let itemToDelete = { id: null, name: null, type: null, deckId: null };
+        let cardToEdit = { deckId: null, cardId: null };
+        
+        // Swipe/Drag state
+        let isDragging = false;
+        let startX = 0;
+        let currentX = 0;
+        // NEW: State to distinguish a click from a drag
+        let isCardClickable = true;
+
 
         // --- DOM Elements ---
         const $ = (selector) => document.querySelector(selector);
@@ -325,8 +356,6 @@
         const cardFrontImage = $('#card-front-image');
         const cardFrontText = $('#card-front-text');
         const cardBackText = $('#card-back-text');
-        const showAnswerContainer = $('#show-answer-container');
-        const showAnswerBtn = $('#show-answer-btn');
         const ratingContainer = $('#rating-container');
         const progressText = $('#progress-text');
         const progressBar = $('#progress-bar');
@@ -338,6 +367,7 @@
         const aiImportModal = $('#ai-import-modal');
         const aiReviewModal = $('#ai-review-modal');
         const viewDeckModal = $('#view-deck-modal');
+        const editCardModal = $('#edit-card-modal');
         const imageAiConfirmModal = $('#image-ai-confirm-modal');
         const deleteConfirmModal = $('#delete-confirm-modal');
         const deleteConfirmText = $('#delete-confirm-text');
@@ -474,9 +504,9 @@
                 <i class="fas ${icon} fa-lg w-8"></i>
                 <span class="flex-grow truncate">${name}</span>
                 ${type === 'deck' ? `<span class="text-sm font-bold text-indigo-400 bg-indigo-900/50 px-2 py-1 rounded-full">${reviewCount}</span>` : ''}
-                <div class="item-actions flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button data-id="${id}" data-name="${name}" data-type="${type}" class="view-item-btn ml-4 text-gray-400 hover:text-sky-400" title="Xem danh sách thẻ"><i class="fas fa-eye"></i></button>
-                    <button data-id="${id}" data-name="${name}" data-type="${type}" class="delete-item-btn ml-2 text-gray-400 hover:text-red-500" title="Xóa"><i class="fas fa-trash"></i></button>
+                <div class="item-actions flex items-center ml-2 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button data-id="${id}" data-name="${name}" data-type="${type}" class="view-item-btn p-2 text-gray-400 hover:text-sky-400" title="Xem danh sách thẻ"><i class="fas fa-eye"></i></button>
+                    <button data-id="${id}" data-name="${name}" data-type="${type}" class="delete-item-btn p-2 text-gray-400 hover:text-red-500" title="Xóa"><i class="fas fa-trash"></i></button>
                 </div>
             `;
 
@@ -528,10 +558,7 @@
             }
 
             flashcard.classList.remove('is-flipped');
-            flashcard.style.transform = '';
-            showAnswerContainer.classList.remove('hidden');
-            showAnswerBtn.textContent = "Hiển thị Đáp án";
-            ratingContainer.classList.add('hidden');
+            flashcard.style.transform = ''; // Reset any swipe transforms
             
             progressText.textContent = `Thẻ ${currentCardIndex + 1} trên ${reviewQueue.length}`;
             progressBar.style.width = `${((currentCardIndex + 1) / reviewQueue.length) * 100}%`;
@@ -540,14 +567,7 @@
         function toggleCardFlip() {
             const isFlipped = flashcard.classList.toggle('is-flipped');
             if (isFlipped) {
-                showAnswerBtn.textContent = "Ẩn Đáp án";
-                showAnswerContainer.classList.add('hidden');
-                ratingContainer.classList.remove('hidden');
                 updateRatingIntervals();
-            } else {
-                showAnswerBtn.textContent = "Hiển thị Đáp án";
-                showAnswerContainer.classList.remove('hidden');
-                ratingContainer.classList.add('hidden');
             }
         }
         
@@ -619,6 +639,8 @@
         async function handleViewDeck(deckId, deckName) {
             showLoading(`Đang tải thẻ môn ${deckName}...`);
             $('#view-deck-title').textContent = `Thẻ môn: ${deckName}`;
+            $('#view-deck-modal').dataset.deckId = deckId; // Store deckId for refresh
+            $('#view-deck-modal').dataset.deckName = deckName;
             const tableBody = $('#view-deck-table-body');
             tableBody.innerHTML = '';
             
@@ -626,18 +648,35 @@
                 const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${deckId}/cards`);
                 const snapshot = await getDocs(cardsRef);
                 if (snapshot.empty) {
-                    tableBody.innerHTML = '<tr><td colspan="2" class="text-center p-4">Môn học này chưa có thẻ nào.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="3" class="text-center p-4">Môn học này chưa có thẻ nào.</td></tr>';
                 } else {
-                    snapshot.forEach(doc => {
-                        const card = doc.data();
-                        const row = `
-                            <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-600">
+                    const cards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    cards.sort((a, b) => (a.createdAt && b.createdAt) ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() : 0);
+
+                    let tableContent = '';
+                    cards.forEach(card => {
+                        tableContent += `
+                            <tr class="bg-gray-800 border-b border-gray-700 hover:bg-gray-600" data-card-id="${card.id}">
                                 <td class="px-6 py-4 font-medium text-white whitespace-nowrap">${card.front}</td>
                                 <td class="px-6 py-4">${card.back}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <button class="edit-card-btn p-2 text-gray-400 hover:text-sky-400" title="Sửa thẻ"
+                                            data-deck-id="${deckId}" data-card-id="${card.id}" 
+                                            data-front="${escape(card.front)}" data-back="${escape(card.back)}">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <button class="delete-card-btn p-2 text-gray-400 hover:text-red-500" title="Xóa thẻ"
+                                            data-deck-id="${deckId}" data-card-id="${card.id}" data-card-front="${escape(card.front)}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                         `;
-                        tableBody.innerHTML += row;
                     });
+                    tableBody.innerHTML = tableContent;
+                    
+                    tableBody.querySelectorAll('.edit-card-btn').forEach(btn => btn.addEventListener('click', handleEditCardClick));
+                    tableBody.querySelectorAll('.delete-card-btn').forEach(btn => btn.addEventListener('click', handleDeleteCardClick));
                 }
                 openModal(viewDeckModal);
             } catch (error) {
@@ -648,45 +687,102 @@
             }
         }
         
-        function showDeleteConfirmation(id, name, type) {
-            itemToDelete = { id, name, type };
-            deleteConfirmText.textContent = `Bạn có chắc muốn xóa ${type === 'folder' ? 'thư mục' : 'môn học'} "${name}" không? Thao tác này sẽ xóa toàn bộ dữ liệu bên trong và không thể hoàn tác.`;
+        function handleEditCardClick(e) {
+            const btn = e.currentTarget;
+            cardToEdit.deckId = btn.dataset.deckId;
+            cardToEdit.cardId = btn.dataset.cardId;
+            $('#edit-card-front').value = unescape(btn.dataset.front);
+            $('#edit-card-back').value = unescape(btn.dataset.back);
+            openModal(editCardModal);
+        }
+
+        async function handleSaveCardEdit() {
+            const { deckId, cardId } = cardToEdit;
+            const newFront = $('#edit-card-front').value.trim();
+            const newBack = $('#edit-card-back').value.trim();
+
+            if (!newFront || !newBack) {
+                showToast("Mặt trước và mặt sau không được để trống.");
+                return;
+            }
+
+            showLoading("Đang lưu thay đổi...");
+            try {
+                const cardRef = doc(db, `artifacts/${appId}/users/${userId}/decks/${deckId}/cards`, cardId);
+                await updateDoc(cardRef, { front: newFront, back: newBack });
+                showToast("Đã cập nhật thẻ thành công!");
+                closeModal(editCardModal);
+                const currentDeckId = $('#view-deck-modal').dataset.deckId;
+                const currentDeckName = $('#view-deck-modal').dataset.deckName;
+                if (currentDeckId) {
+                    await handleViewDeck(currentDeckId, currentDeckName);
+                }
+            } catch (error) {
+                console.error("Error updating card:", error);
+                showToast("Lỗi khi lưu thay đổi.");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function handleDeleteCardClick(e) {
+            const btn = e.currentTarget;
+            const deckId = btn.dataset.deckId;
+            const cardId = btn.dataset.cardId;
+            const cardFront = unescape(btn.dataset.cardFront);
+            showDeleteConfirmation(cardId, cardFront, 'card', deckId);
+        }
+
+        function showDeleteConfirmation(id, name, type, deckId = null) {
+            itemToDelete = { id, name, type, deckId };
+            let message = '';
+            if (type === 'card') {
+                message = `Bạn có chắc muốn xóa thẻ "${name}" không? Thao tác này không thể hoàn tác.`;
+            } else {
+                message = `Bạn có chắc muốn xóa ${type === 'folder' ? 'thư mục' : 'môn học'} "${name}" không? Thao tác này sẽ xóa toàn bộ dữ liệu bên trong và không thể hoàn tác.`;
+            }
+            deleteConfirmText.textContent = message;
             openModal(deleteConfirmModal);
         }
 
         async function executeDelete() {
-            const { id, name, type } = itemToDelete;
+            const { id, name, type, deckId } = itemToDelete;
             if (!id) return;
 
             closeModal(deleteConfirmModal);
             showLoading(`Đang xóa ${name}...`);
             try {
                 if (type === 'folder') {
-                    // Recursive delete is complex. For now, we delete the folder doc.
-                    // A proper implementation would use a cloud function for recursive deletion.
                     await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/folders`, id));
-                } else { // type === 'deck'
+                } else if (type === 'deck') {
                     const cardsRef = collection(db, `artifacts/${appId}/users/${userId}/decks/${id}/cards`);
                     const cardsSnapshot = await getDocs(cardsRef);
                     const batch = writeBatch(db);
-                    cardsSnapshot.forEach(cardDoc => {
-                        batch.delete(cardDoc.ref);
-                    });
+                    cardsSnapshot.forEach(cardDoc => batch.delete(cardDoc.ref));
                     await batch.commit();
                     await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/decks`, id));
+                } else if (type === 'card') {
+                    await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/decks/${deckId}/cards`, id));
+                    const currentDeckId = $('#view-deck-modal').dataset.deckId;
+                    const currentDeckName = $('#view-deck-modal').dataset.deckName;
+                    if (currentDeckId === deckId) {
+                        await handleViewDeck(currentDeckId, currentDeckName);
+                    }
                 }
                 showToast(`Đã xóa "${name}" thành công.`);
-                renderFileManager();
+                if (type !== 'card') {
+                    renderFileManager();
+                }
             } catch (error) {
                 console.error("Error deleting item:", error);
                 showToast("Lỗi khi xóa. Vui lòng thử lại.");
             } finally {
-                itemToDelete = { id: null, name: null, type: null };
+                itemToDelete = { id: null, name: null, type: null, deckId: null };
                 hideLoading();
             }
         }
 
-        async function handleRatingClick(rating) {
+        async function rateAndAdvance(rating) {
             const card = reviewQueue[currentCardIndex];
             const updatedCard = calculateNextReview(card, rating);
             try {
@@ -799,7 +895,7 @@
 
         // --- Gemini & Image API Calls ---
         async function callApi(url, payload) {
-            const apiKey = "AIzaSyAFavlPk2DLCsZHdmpKrlwjwzQGO02ukio"; // Canvas will provide this
+            const apiKey = "AIzaSyAFavlPk2DLCsZHdmpKrlwjwzQGO02ukio";
             const finalUrl = `${url}?key=${apiKey}`;
             try {
                 const response = await fetch(finalUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -813,7 +909,6 @@
         
         async function findImageForCard(term) {
              try {
-                // Using a generic term for better results
                 const searchPrompt = `A clear, simple, high-quality photograph or illustration representing the concept of "${term}"`;
                 const payload = { instances: [{ prompt: searchPrompt }], parameters: { "sampleCount": 1} };
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`;
@@ -882,9 +977,17 @@
             batch.set(doc(db, `artifacts/${appId}/users/${userId}/decks`, deckId), { name: "Từ vựng Anh Văn", folderId: folderId, createdAt: new Date().toISOString() });
             const cards = [{f: "Hello", b: "/həˈloʊ/ Xin chào"}, {f: "Goodbye", b: "/ɡʊdˈbaɪ/ Tạm biệt"}];
             const todayStr = new Date().toISOString().split('T')[0];
-            cards.forEach(c => {
+            const now = new Date();
+            cards.forEach((c, index) => {
                  const cardRef = doc(collection(db, `artifacts/${appId}/users/${userId}/decks/${deckId}/cards`));
-                 batch.set(cardRef, { front: c.f, back: c.b, nextReviewDate: todayStr, interval: 0, easeFactor: BASE_EASE_FACTOR });
+                 batch.set(cardRef, { 
+                     front: c.f, 
+                     back: c.b, 
+                     nextReviewDate: todayStr, 
+                     interval: 0, 
+                     easeFactor: BASE_EASE_FACTOR, 
+                     createdAt: new Date(now.getTime() + index).toISOString()
+                });
             });
             batch.set(userDocRef, { initialized_pro_v1: true }, { merge: true });
             await batch.commit();
@@ -910,7 +1013,8 @@
                 }
             });
 
-            for(const card of cardsToAdd) {
+            const now = new Date();
+            for(const [index, card] of cardsToAdd.entries()) {
                 const newCardRef = doc(cardsRef);
                 const newCardData = {
                     front: card.front,
@@ -918,7 +1022,7 @@
                     nextReviewDate: todayStr,
                     interval: 0,
                     easeFactor: BASE_EASE_FACTOR,
-                    createdAt: new Date().toISOString(),
+                    createdAt: new Date(now.getTime() + index).toISOString(),
                     frontImage: null
                 };
                 if (shouldFindImages) {
@@ -958,8 +1062,59 @@
                         </div>
                     </div></div>`;
             });
-            // The translation button is no longer needed with the new logic
         }
+
+        // --- Swipe/Drag Handlers ---
+        function dragStart(e) {
+            // If the interaction starts on an interactive element like a button, do nothing.
+            if (e.target.closest('button')) return;
+            
+            e.preventDefault();
+            isDragging = true;
+            isCardClickable = true; // Assume it's a click until dragged far enough
+            startX = e.pageX || e.touches[0].pageX;
+            currentX = startX;
+            flashcard.classList.add('swiping');
+        }
+
+        function dragMove(e) {
+            if (!isDragging) return;
+            currentX = e.pageX || e.touches[0].pageX;
+            const deltaX = currentX - startX;
+
+            // If dragged more than a small threshold, it's a swipe, not a click.
+            if (Math.abs(deltaX) > 10) {
+                isCardClickable = false;
+            }
+            
+            const isFlipped = flashcard.classList.contains('is-flipped');
+            const rotationY = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+            flashcard.style.transform = `translateX(${deltaX}px) ${rotationY} rotate(${deltaX / 20}deg)`;
+        }
+
+        function dragEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            const deltaX = currentX - startX;
+            
+            flashcard.classList.remove('swiping');
+            
+            // Only advance the card if it was a significant swipe
+            if (Math.abs(deltaX) > 100) {
+                if (deltaX > 0) { rateAndAdvance(3); } 
+                else { rateAndAdvance(1); }
+            } else {
+                // If it wasn't a swipe, just reset the card's position
+                flashcard.classList.add('resetting');
+                const finalRotation = flashcard.classList.contains('is-flipped') ? 'rotateY(180deg)' : 'rotateY(0deg)';
+                flashcard.style.transform = finalRotation;
+                setTimeout(() => flashcard.classList.remove('resetting'), 300);
+            }
+            
+            startX = 0;
+            currentX = 0;
+        }
+
 
         // --- App Entry Point & Event Listeners ---
         async function main() {
@@ -979,14 +1134,10 @@
                 return;
             }
 
-            // Pre-load speech synthesis voices
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.onvoiceschanged = () => {
-                    window.speechSynthesis.getVoices();
-                };
+                window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
             }
 
-            // Setup all event listeners
             loginBtn.addEventListener('click', signInWithGoogle);
             logoutBtn.addEventListener('click', signOutUser);
             
@@ -994,16 +1145,13 @@
                 window.location.href = 'laplaingatquangGoogle.html';
             });
 
-            // Modal Cancel Buttons
             $$('.modal-cancel').forEach(btn => btn.addEventListener('click', () => {
                 btn.closest('.fixed').classList.add('hidden');
             }));
 
-            // Delete Confirmation
             confirmDeleteBtn.addEventListener('click', executeDelete);
             cancelDeleteBtn.addEventListener('click', () => closeModal(deleteConfirmModal));
 
-            // Add Folder/Deck
             $('#add-folder-btn').addEventListener('click', () => openModal(folderModal));
             $('#confirm-add-folder').addEventListener('click', async () => {
                 const name = $('#folder-name-input').value.trim();
@@ -1025,7 +1173,6 @@
                 } catch (e) { showToast("Lỗi khi thêm môn học."); }
             });
 
-            // Schedule Modal
             $('#view-schedule-btn').addEventListener('click', handleViewSchedule);
             $$('#review-schedule-modal .filter-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -1035,7 +1182,6 @@
                 });
             });
 
-            // AI Import
             $('#ai-import-btn').addEventListener('click', async () => {
                 const decksRef = collection(db, `artifacts/${appId}/users/${userId}/decks`);
                 const snapshot = await getDocs(decksRef);
@@ -1064,11 +1210,9 @@
                 let parts = [];
 
                 if (text) {
-                    // **FIXED PROMPT** - More direct and robust
                     prompt = `You are an English vocabulary flashcard assistant. From the text provided, identify the key English words or short phrases. For each term, find its IPA phonetic transcription and its Vietnamese translation. Your output must be a JSON object with a single key 'flashcards', which is an array of objects. Each object must have 'front' (the English term) and 'back' (a string formatted as '/phonetic/ Vietnamese translation'). Process the following text:\n\n${text}`;
                     parts.push({ text: prompt });
                 } else if (imageFile) {
-                    // **FIXED PROMPT** - More direct and robust
                     prompt = "You are an English vocabulary flashcard assistant. From the image provided, identify the key English words or short phrases. For each term, find its IPA phonetic transcription and its Vietnamese translation. Your output must be a JSON object with a single key 'flashcards', which is an array of objects. Each object must have 'front' (the English term) and 'back' (a string formatted as '/phonetic/ Vietnamese translation').";
                     try {
                         const base64 = await imageToBase64(imageFile);
@@ -1088,11 +1232,10 @@
                         generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { flashcards: { type: "ARRAY", items: { type: "OBJECT", properties: { front: { type: "STRING" }, back: { type: "STRING" } }, required: ["front", "back"] } } } } }
                     };
                     const result = await callApi(url, payload);
-                    // **FIXED LOGIC** - Directly use the result
                     const cards = JSON.parse(result.candidates[0].content.parts[0].text).flashcards;
                     if (cards && cards.length > 0) {
                         aiGeneratedCards = cards;
-                        renderAiReviewList(); // This function is now simpler
+                        renderAiReviewList();
                         closeModal(aiImportModal);
                         openModal(aiReviewModal);
                     } else {
@@ -1106,26 +1249,77 @@
                 }
             });
             
-            // **REMOVED** The 'aiTranslateBtn' event listener is no longer necessary.
-
             $('#confirm-ai-add').addEventListener('click', () => { closeModal(aiReviewModal); openModal(imageAiConfirmModal); });
             $('#confirm-ai-add-no-image').addEventListener('click', () => { closeModal(imageAiConfirmModal); addAiCardsToFirestore(false); });
             $('#confirm-ai-add-with-image').addEventListener('click', () => { closeModal(imageAiConfirmModal); addAiCardsToFirestore(true); });
+            $('#confirm-edit-card').addEventListener('click', handleSaveCardEdit);
+
+            $('#copy-deck-btn').addEventListener('click', () => {
+                const tableBody = $('#view-deck-table-body');
+                const rows = tableBody.querySelectorAll('tr');
+                if (rows.length === 0) {
+                    showToast("Không có gì để sao chép.");
+                    return;
+                }
+                let contentToCopy = '';
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 2) {
+                        const front = cells[0].innerText.trim();
+                        const back = cells[1].innerText.trim();
+                        contentToCopy += `${front}\t${back}\n`;
+                    }
+                });
+
+                if (contentToCopy) {
+                    const textarea = document.createElement('textarea');
+                    textarea.style.position = 'fixed';
+                    textarea.style.top = '-9999px';
+                    textarea.value = contentToCopy;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        showToast('Đã sao chép nội dung vào clipboard!');
+                    } catch (err) {
+                        showToast('Lỗi khi sao chép.');
+                        console.error('Copy failed', err);
+                    }
+                    document.body.removeChild(textarea);
+                }
+            });
 
             // Review Screen Logic
-            playAudioBtn.addEventListener('click', (e) => { e.stopPropagation(); const textToSpeak = cardFrontText.textContent; if (textToSpeak) speakText(textToSpeak); });
-            flashcardContainer.addEventListener('click', toggleCardFlip);
-            showAnswerBtn.addEventListener('click', toggleCardFlip);
-            ratingContainer.addEventListener('click', (e) => { if (e.target.closest('button')) handleRatingClick(parseInt(e.target.closest('button').dataset.rating)); });
+            playAudioBtn.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                const textToSpeak = cardFrontText.textContent; 
+                if (textToSpeak) speakText(textToSpeak); 
+            });
+            
+            // UPDATED: New click listener to handle flips safely
+            flashcardContainer.addEventListener('click', (e) => {
+                if (isCardClickable) {
+                    toggleCardFlip();
+                }
+            });
+
+            ratingContainer.addEventListener('click', (e) => { 
+                if (e.target.closest('button')) {
+                    rateAndAdvance(parseInt(e.target.closest('button').dataset.rating));
+                }
+            });
+
             $('#back-to-manager-btn').addEventListener('click', () => { showView(fileManagerView); renderFileManager(); });
             $('#return-to-manager-btn').addEventListener('click', () => { showView(fileManagerView); renderFileManager(); });
             
-            // Swipe Logic
-            flashcardContainer.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-            flashcardContainer.addEventListener('touchmove', e => { if (!flashcard.classList.contains('is-flipped')) return; const deltaX = e.changedTouches[0].screenX - touchStartX; flashcard.classList.add('swiping'); flashcard.style.transform = `rotateY(180deg) translateX(${deltaX}px) rotate(${deltaX / 20}deg)`; }, { passive: true });
-            flashcardContainer.addEventListener('touchend', e => { if (!flashcard.classList.contains('is-flipped')) return; touchEndX = e.changedTouches[0].screenX; const deltaX = touchEndX - touchStartX; flashcard.classList.remove('swiping'); flashcard.style.transform = 'rotateY(180deg)'; if (Math.abs(deltaX) > 100) { if (deltaX < 0) handleRatingClick(3); else handleRatingClick(0); } });
+            // Swipe/Drag Event Listeners
+            flashcardContainer.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', dragEnd);
+            flashcardContainer.addEventListener('touchstart', dragStart, { passive: false });
+            document.addEventListener('touchmove', dragMove, { passive: false });
+            document.addEventListener('touchend', dragEnd);
 
-            // Auth State Change Listener
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
@@ -1133,7 +1327,7 @@
                     
                     userInfo.name.textContent = user.displayName;
                     userInfo.email.textContent = user.email;
-                    userInfo.avatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=4f46e5&color=fff`;
+                    userInfo.avatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=4f46e5&color=fff`;
                     
                     showLoading('Đang tải dữ liệu của bạn...');
                     await initializeAppForUser();
